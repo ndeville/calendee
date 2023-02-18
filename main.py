@@ -31,11 +31,6 @@ print("\n\n\n\n")
 
 test = False
 
-# UPDATE_BB = True
-# UPDATE_DV = True
-# slot = 30 # minutes
-# weekdays_forward = 15 # number of weekdays to look forward and return availabilities for
-
 available_days = [ # comment lines below to make unavailable
     "Mon",
     "Tue",
@@ -44,25 +39,25 @@ available_days = [ # comment lines below to make unavailable
     "Fri",
 ]
 
-available_hours = { # comment lines below to make unavailable
-    # "08:00": "8am",
-    # "09:00": "9am",
-    # "10:00": "10am",
-    "11:00": "11am",
-    "11:30": "11:30am",
-    "12:00": "12pm",
-    # "13:00": "1pm",
-    # "14:00": "2pm",
-    # "15:00": "3pm",
-    "16:00": "4pm",
-    "16:30": "4:30pm",
-    "17:00": "5pm",
-    # "18:00": "6pm",
-    # "19:00": "7pm",
-}
+available_hours = [ # comment lines below to make unavailable
+    # "08:00",
+    # "09:00",
+    # "10:00",
+    "11:00",
+    # "11:30",
+    "12:00",
+    # "13:00",
+    # "14:00",
+    # "15:00",
+    "16:00",
+    # "16:30",
+    "17:00",
+    # "18:00",
+    # "19:00",
+]
 
-# This will define the return time & format
-timezones = { 
+
+timezones = { # This will define the return time & format
     "CET": 0, # default
     "UK": 1, # timezone offset in hours
     "ET": 6,
@@ -124,12 +119,12 @@ def format_time(datetime_object, ampm=False):
     # hour = datetime_object.strftime("%H:%M")
 
     if not ampm:
-        # if hour.endswith(":00") and int(hour[:2]) < 12:
-        #     hour = hour[:-3]
         formatted_time = datetime_object.strftime("%H:%M")
     else:
         # formatted_time = f"{available_hours[hour]}"
         formatted_time = datetime_object.strftime('%I:%M%p').lower()
+        if formatted_time.endswith(":00") and int(formatted_time[:2]) < 12:
+            hour = hour[:-3]
 
     return formatted_time
 
