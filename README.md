@@ -1,2 +1,3 @@
 # calendee
-Generates availabilities as text to be inserted anywhere, checking with Google Calendar API
+
+Notes: <a href="https://notes.nicolasdeville.com/projects/calendaree" target="_blank">https://notes.nicolasdeville.com/projects/calendaree</a>  
