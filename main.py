@@ -122,9 +122,13 @@ def format_time(datetime_object, ampm=False):
         formatted_time = datetime_object.strftime("%H:%M")
     else:
         # formatted_time = f"{available_hours[hour]}"
-        formatted_time = datetime_object.strftime('%I:%M%p').lower()
-        if formatted_time.endswith(":00") and int(formatted_time[:2]) < 12:
-            hour = hour[:-3]
+        # formatted_time = datetime_object.strftime('%I:%M%p').lower()
+        formatted_time = datetime_object.strftime('%I:%M').lower()
+        # if formatted_time.endswith(":00") and int(formatted_time[:2]) < 12:
+        if formatted_time.endswith(":00"):
+            formatted_time = formatted_time[:-3]
+        if formatted_time.startswith("0"):
+            formatted_time = formatted_time[1:]
 
     return formatted_time
 
@@ -209,7 +213,7 @@ def print_availabilities(final_availabilities, timezone='CET'):
         output = "(CET / Germany time)\n"
         ampm = False
     elif timezone == 'UK':
-        output = "(UK)\n"
+        output = "(UK time)\n"
         ampm = True
     elif timezone == 'ET':
         output = "(ET)\n"
