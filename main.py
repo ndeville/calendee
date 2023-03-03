@@ -105,7 +105,8 @@ def format_day(datetime_object):
 
     # Use the custom suffix() function to determine the appropriate suffix for the day
     suffix_str = suffix(datetime_object)
-    day_name = datetime_object.strftime("%a %d" + suffix_str)
+    # day_name = datetime_object.strftime("%a %d" + suffix_str)
+    day_name = datetime_object.strftime("%a %e" + suffix_str)
 
     if day == tomorrow.day:
         formatted_day = f"tomorrow"
@@ -121,10 +122,8 @@ def format_time(datetime_object, ampm=False):
     if not ampm:
         formatted_time = datetime_object.strftime("%H:%M")
     else:
-        # formatted_time = f"{available_hours[hour]}"
-        # formatted_time = datetime_object.strftime('%I:%M%p').lower()
-        formatted_time = datetime_object.strftime('%I:%M').lower()
-        # if formatted_time.endswith(":00") and int(formatted_time[:2]) < 12:
+        formatted_time = datetime_object.strftime("%-I%p").lower()
+
         if formatted_time.endswith(":00"):
             formatted_time = formatted_time[:-3]
         if formatted_time.startswith("0"):
