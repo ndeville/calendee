@@ -1,3 +1,6 @@
+####################
+# CALENDEE
+
 import os
 import sys
 
@@ -8,30 +11,34 @@ USER_PATH = os.getenv("USER_PATH")
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-####################
-# CALENDAREE (WORK IN PROGRESS)
-
 from datetime import datetime, time, timezone, timedelta
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
-# import pytz
 import subprocess
 
 # for pasting
 from pynput.keyboard import Key, Controller
 keyb = Controller()
 
+# Email addresses of calendars to check
 EMAIL_BB = os.getenv("EMAIL_BB")
 EMAIL_DV = os.getenv("EMAIL_DV")
 
-print("\n\n\n\n")
+print("\n\n")
 
-# Global variables
+####################
+# GLOBAL VARIABLES
 
 test = False
 
-available_days = [ # comment lines below to make unavailable
+slot = 30 # minutes
+
+# How many weekdays forward to check for availability
+weekdays_forward = 3 
+
+
+available_days = [ 
     "Mon",
     "Tue",
     "Wed",
@@ -39,7 +46,8 @@ available_days = [ # comment lines below to make unavailable
     "Fri",
 ]
 
-available_hours = [ # comment lines below to make unavailable
+# Comment lines below to make unavailable
+available_hours = [ 
     # "08:00",
     # "09:00",
     # "10:00",
@@ -56,8 +64,8 @@ available_hours = [ # comment lines below to make unavailable
     # "19:00",
 ]
 
-
-timezones = { # This will define the return time & format
+# This will define the return time & format
+timezones = { 
     "CET": 0, # default
     "UK": 1, # timezone offset in hours
     "ET": 6,
@@ -65,7 +73,9 @@ timezones = { # This will define the return time & format
     "PT": 9,
 }
 
-# Insert output functions
+####################
+
+# OUTPUT FUNCTIONS
 
 def write_to_clipboard(output):
     process = subprocess.Popen(
@@ -78,7 +88,7 @@ def paste():
         keyb.press('f')
         keyb.release('f')
 
-# DAYS
+# DAY FUNCTIONS
 
 def is_weekday(date):
     """
@@ -86,8 +96,6 @@ def is_weekday(date):
     and False if it's a weekend day (Saturday or Sunday).
     """
     return date.weekday() < 5
-
-# BLANK AVAILABILITIES
 
 def suffix(day): # day == datetime object
     if 11 <= day.day <= 13:
@@ -105,7 +113,7 @@ def format_day(datetime_object):
 
     # Use the custom suffix() function to determine the appropriate suffix for the day
     suffix_str = suffix(datetime_object)
-    # day_name = datetime_object.strftime("%a %d" + suffix_str)
+    # Final day name format
     day_name = datetime_object.strftime("%a %e" + suffix_str)
 
     if day == tomorrow.day:
@@ -116,8 +124,6 @@ def format_day(datetime_object):
     return formatted_day
 
 def format_time(datetime_object, ampm=False):
-
-    # hour = datetime_object.strftime("%H:%M")
 
     if not ampm:
         formatted_time = datetime_object.strftime("%H:%M")
@@ -150,7 +156,7 @@ def get_all_events(calendar_id, token, test=False):
     now = datetime.utcnow()
     now_formatted = now.isoformat() + 'Z'
 
-    # Set the maximum time to be 1 month in the future
+    # Set the maximum time to be 1 month in the future (covers potential holidays)
     max_time = now + timedelta(days=30)
     max_time_formatted = max_time.isoformat() + 'Z'
 
@@ -164,6 +170,7 @@ def get_all_events(calendar_id, token, test=False):
     ).execute()
 
     if test:
+        print(f"\n{events_result}:")
         pp.pprint(events_result)
 
     # Get the events from the response
@@ -180,10 +187,10 @@ def list_of_events_datetimes(events):
     for event in events:
         try:
             start = event['start']['dateTime']
-            start_datetime = datetime.fromisoformat(start).replace(tzinfo=None) # timezone-naive
+            start_datetime = datetime.fromisoformat(start).replace(tzinfo=None) # Timezone-naive
 
             end = event['end']['dateTime']
-            end_datetime = datetime.fromisoformat(end).replace(tzinfo=None) # timezone-naive
+            end_datetime = datetime.fromisoformat(end).replace(tzinfo=None) # Timezone-naive
 
             events_datetimes_list.append((start_datetime, end_datetime))
         except KeyError:
@@ -207,7 +214,12 @@ def get_final_availabilities(availabilities, consolidated_events):
             final_availabilities.append(start_time)
     return final_availabilities
 
-def print_availabilities(final_availabilities, timezone='CET'):
+def generate_availabilities(final_availabilities, timezone='CET'): # CET timezone is default
+    """
+    Generate text output of availabilities to be pasted 
+    """
+
+    # Intro line, indicating timezone of availabilities
     if timezone == 'CET':
         output = "(CET / Germany time)\n"
         ampm = False
@@ -226,8 +238,8 @@ def print_availabilities(final_availabilities, timezone='CET'):
 
     time_offset = timezones[timezone]
 
+    # Generate the availabilities
     day = False
-    # new_line = ""
     for a in final_availabilities:
         a = a - timedelta(hours=time_offset) # convert to recipient timezone
         if day != a.date():
@@ -236,24 +248,26 @@ def print_availabilities(final_availabilities, timezone='CET'):
         else:
             output = f"{output}, {format_time(a, ampm=ampm)}"
     
-    output = f"{output}\n\nor see all availabilities at https://cal.com/ndeville"
+    # Outro line: Add a link to the calendar
+    output = f"{output}\n\nor see all at https://cal.com/ndeville"
         
-    lines = output.split('\n')  # split the text into lines
-    for i in range(1, len(lines)):  # skip the first line (header)
-        if ',' in lines[i]:  # check if there is a comma in the line
-            lst = lines[i].rsplit(", ", 1)  # split the line from the right side by the last comma
-            lines[i] = " or ".join(lst)  # join the resulting list with "or" as the last element
-    final_output = '\n'.join(lines)  # join the lines back into a single string
+    # Replace the last comma with "or"
+    lines = output.split('\n')  # Split the text into lines
+    for i in range(1, len(lines)):  # Skip the first line (header)
+        if ',' in lines[i]:  # Check if there is a comma in the line
+            lst = lines[i].rsplit(", ", 1)  # Split the line from the right side by the last comma
+            lines[i] = " or ".join(lst)  # Join the resulting list with "or" as the last element
+    final_output = '\n'.join(lines)  # Join the lines back into a single string
 
     print(final_output)
     return final_output
 
 # MAIN FUNCTION
 
-def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=False):
+def get_my_availabilities(timezone="CET", slot=slot, weekdays_forward=weekdays_forward, test=False):
     """
     slot = 30 # minutes
-    weekdays_forward = 5 # number of weekdays to look forward and return availabilities for
+    weekdays_forward = 3 # number of weekdays to look forward and return availabilities for
     """
     global available_days
     global available_hours
@@ -264,10 +278,6 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
     now = datetime.now()
 
     today = now.date()
-    # today_string = f"{now.strftime('%Y-%m-%d %H:%M')}"
-
-    tomorrow = today + timedelta(days=1)
-    # tomorrow_string = f"{tomorrow.strftime('%Y-%m-%d %H:%M')}"
 
     days_to_check = []
     for x in range(1,20): # random high number of days to check for availability
@@ -276,8 +286,7 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
             days_to_check.append(day_to_check)
 
     if test:
-        print()
-        print("days_to_check:")
+        print("\ndays_to_check:")
         pp.pprint(days_to_check)
         print()
 
@@ -295,19 +304,11 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
             # Add the timedelta to the END datetime object
             datetime_object_end = datetime_object_start + delta
 
-            # For timezone senstitivity, we need to set the timezone of the datetime object
-            # # Set the timezone of the datetime object to CET
-            # cet_timezone = pytz.timezone('CET')
-            # datetime_cet = cet_timezone.localize(datetime_object)
-            # availabilities.append(datetime_cet)
-
             availabilities.append((datetime_object_start, datetime_object_end))
 
     if test:
-        print()
-        print(f"availabilities:")
+        print(f"\navailabilities:")
         pp.pprint(availabilities)
-        print()
 
     # CONSOLIDATED EVENTS
 
@@ -319,8 +320,7 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
     datetimes_list_bb = list_of_events_datetimes(all_future_events_bb)
         
     if test:
-        print()
-        print(f"datetimes_list_bb:")
+        print(f"\ndatetimes_list_bb:")
         pp.pprint(datetimes_list_bb)
 
     # DV
@@ -328,16 +328,14 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
     datetimes_list_dv = list_of_events_datetimes(all_future_events_dv)
         
     if test:
-        print()
-        print(f"datetimes_list_dv:")
+        print(f"\ndatetimes_list_dv:")
         pp.pprint(datetimes_list_dv)
 
     consolidated_events = datetimes_list_bb + datetimes_list_dv
     consolidated_events = sorted(consolidated_events, key=lambda x: x[0]) # sorted by start time
 
     if test:
-        print()
-        print(f"consolidated_events:")
+        print(f"\nconsolidated_events:")
         pp.pprint(consolidated_events)
         print()
 
@@ -346,15 +344,11 @@ def get_my_availabilities(timezone="CET", slot=30, weekdays_forward=5, test=Fals
     final_availabilities = get_final_availabilities(availabilities, consolidated_events)
 
     if test:
-        print()
-        print(f"final_availabilities:")
+        print(f"\nfinal_availabilities:")
         pp.pprint(final_availabilities)
 
     print("\n\n")
-    output_my_availabilities = print_availabilities(final_availabilities, timezone=timezone)
-
-    # TODO
-    # - add timezone support
+    output_my_availabilities = generate_availabilities(final_availabilities, timezone=timezone)
 
     return output_my_availabilities
 
@@ -364,13 +358,18 @@ if __name__ == '__main__':
     print()
     arguments = sys.argv
 
-    if len(sys.argv) > 1: # if argument passed
+    # Get timezone argument, if passed
+    if len(sys.argv) > 1: 
         tz = sys.argv[1].upper()
     else:
         tz = "CET"
     print(f"tz: {tz}")
 
+    # Generate availabilities
     my_availabilities = get_my_availabilities(timezone=tz)
+
+    # Write to clipboard
     write_to_clipboard(my_availabilities)
+
+    # Paste availabilities
     paste()
-    
