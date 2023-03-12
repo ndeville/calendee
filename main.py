@@ -37,7 +37,6 @@ slot = 30 # minutes
 # How many weekdays forward to check for availability
 weekdays_forward = 3 
 
-
 available_days = [ 
     "Mon",
     "Tue",
@@ -67,10 +66,13 @@ available_hours = [
 # This will define the return time & format
 timezones = { 
     "CET": 0, # default
-    "UK": 1, # timezone offset in hours
-    "ET": 6,
-    "MT": 7,
-    "PT": 9,
+    "AP": 0, # NOT a timezone. Short for Am/Pm / returns CET timezone but in am/pm format
+    "UK": -1, # timezone offset in hours
+    "ET": -6,
+    "MT": -7,
+    "PT": -9,
+    "IST": 4.5, # Indian Standard Time (New Delhi)
+    "IT": 4.5, # Indian Standard Time (New Delhi)
 }
 
 ####################
@@ -223,6 +225,9 @@ def generate_availabilities(final_availabilities, timezone='CET'): # CET timezon
     if timezone == 'CET':
         output = "(CET / Germany time)\n"
         ampm = False
+    elif timezone == 'AP': # short for Am/Pm / returns CET timezone in am/pm format
+        output = "(CET / Germany time)\n"
+        ampm = True
     elif timezone == 'UK':
         output = "(UK time)\n"
         ampm = True
@@ -235,13 +240,16 @@ def generate_availabilities(final_availabilities, timezone='CET'): # CET timezon
     elif timezone == 'PT':
         output = "(PT)\n"
         ampm = True
+    elif timezone in ['IST', 'IT']:
+        output = "(IST)\n"
+        ampm = True
 
     time_offset = timezones[timezone]
 
     # Generate the availabilities
     day = False
     for a in final_availabilities:
-        a = a - timedelta(hours=time_offset) # convert to recipient timezone
+        a = a + timedelta(hours=time_offset) # convert to recipient timezone
         if day != a.date():
             output = f"{output}\n- {format_day(a)} {format_time(a, ampm=ampm)}"
             day = a.date()
