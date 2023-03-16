@@ -1,10 +1,14 @@
 # calendee
 
+Python scripts interfacing with Google Calendar.  
+
+## availabilities.py
+
 Notes: <a href="https://notes.nicolasdeville.com/projects/calendee" target="_blank">https://notes.nicolasdeville.com/projects/calendee</a>  
 
 Working code, used via keyboard shortcuts using <a href="https://www.alfredapp.com/" target="_blank">Alfred</a> (optional).  
 
-## Variables
+### variables
 
 are `available_days`, `available_hours` & `timezones`:  
 
@@ -44,7 +48,7 @@ timezones = { # This will define the return time & format
 }
 ```
 
-## Outputs
+### outputs
 
 Standard:  
 
@@ -52,12 +56,10 @@ Standard:
 (CET / Germany time)
 
 - tomorrow 11:00, 12:00 or 16:00
-- Wed 01st 11:00, 12:00, 16:00 or 17:00
-- Thu 02nd 11:00, 12:00, 16:00 or 17:00
-- Fri 03rd 11:00, 12:00, 16:00 or 17:00
-- Mon 06th 11:00, 12:00 or 17:00
+- Mon 20th 11:00, 12:00, 16:00 or 17:00
+- Tue 21st 11:00, 12:00, 16:00 or 17:00
 
-or see all availabilities at https://cal.com/ndeville
+or see all at https://cal.com/ndeville
 ```
 
 UK:  
@@ -65,13 +67,11 @@ UK:
 ``` bash
 (UK time)
 
-- tomorrow 10, 11 or 3
-- Wed 01st 10, 11, 3 or 4
-- Thu 02nd 10, 11, 3 or 4
-- Fri 03rd 10, 11, 3 or 4
-- Mon 06th 10, 11 or 4
+- tomorrow 10am, 11am or 3pm
+- Mon 20th 10am, 11am, 3pm or 4pm
+- Tue 21st 10am, 11am, 3pm or 4pm
 
-or see all availabilities at https://cal.com/ndeville
+or see all at https://cal.com/ndeville
 ```
 
 PT: 
@@ -79,16 +79,31 @@ PT:
 ``` bash
 (PT)
 
-- tomorrow 2, 3 or 7
-- Wed 01st 2, 3, 7 or 8
-- Thu 02nd 2, 3, 7 or 8
-- Fri 03rd 2, 3, 7 or 8
-- Mon 06th 2, 3 or 8
+- tomorrow 2am, 3am or 7am
+- Mon 20th 2am, 3am, 7am or 8am
+- Tue 21st 2am, 3am, 7am or 8am
 
-or see all availabilities at https://cal.com/ndeville
+or see all at https://cal.com/ndeville
 ```
 
-## TODO
+# meetings.py
 
-- finalise am/pm formatting
-- ensure X number of days of availabilities are always returned (eg if holidays are coming up)  
+Added <span class="datestamp">16 Mar 2023</span>   
+
+Notes: <a href="https://notes.nicolasdeville.com/projects/calendee#Meetings" target="_blank">https://notes.nicolasdeville.com/projects/calendee#Meetings</a>
+
+Working code. 
+
+Fetches all events with attendees from a Google Calendar, and returns a list of events objects with the following attributes:  
+
+``` python
+class Meeting:
+    def __init__(self):
+        self.id = '' # from Google
+        self.summary = ''
+        self._date = '' # from Google 'start' in YYYY-MM-DD format
+        self.htmlLink = ''
+        self.attendees = set() # unique emails from both 'attendees' and 'organiser'
+        self.description = ''
+        self.domain = '' # WARNING: this caters only for 1 domain per meeting
+```

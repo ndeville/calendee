@@ -1,5 +1,6 @@
 # Nic
 
+add_to_grist.py
 *.json
 credentials.json
 creds_*/

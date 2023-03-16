@@ -25,10 +25,12 @@ keyb = Controller()
 EMAIL_BB = os.getenv("EMAIL_BB")
 EMAIL_DV = os.getenv("EMAIL_DV")
 
+print()
+
 ####################
 # GLOBAL VARIABLES
 
-test = False
+test = True
 
 blacklist = os.getenv("BLACKLIST_MEETINGS_PARTICIPANTS").split(",")
 
@@ -42,12 +44,12 @@ meetings_ids = []
 class Meeting:
     def __init__(self):
         self.id = '' # from Google
-        self.uid = '' # self.organiser + self.start
         self.summary = ''
         self._date = '' # from Google 'start'
         self.htmlLink = ''
         self.attendees = set() # unique emails from both 'attendees' and 'organiser'
         self.description = ''
+        self.domain = '' # WARNING: this caters only for 1 domain per meeting
 
     @property
     def date(self):
@@ -70,6 +72,11 @@ class Meeting:
         else:
             raise ValueError("Invalid date format. Should be YYYY-MM-DD")
 
+# Print attributes in output to help with coding & debugging
+empty_meeting = Meeting()
+print(f"\nMeeting attributes:")
+print(" ".join([f"{key}={value}" for key, value in empty_meeting.__dict__.items()]))
+print()
 
 ####################
 # FUNCTIONS
@@ -161,15 +168,13 @@ def construct_meeting(event, test=False):
 
     if len(m.attendees) > 0:
 
-        if test:
-            print(f"{m.attendees=} on {m.date}")
+        # Domain
+        for attendee in m.attendees:
+            m.domain = attendee.split('@')[1]
 
-        # UID
-        try:
-            m.uid = f"{m.attendees[0]}-{m.date}"
-        except KeyError:
-            print(f"\n\nERROR with {event['id']}:")
-            pp.pprint(event)
+        if test:
+            print(f"{m.attendees=} on {m.date} from domain {m.domain}")
+
         m.summary = event['summary']
 
         return m
@@ -184,14 +189,12 @@ def process_events(all_events_from_one_calendar, test=False):
 
     for event in all_events_from_one_calendar:
 
-        m = construct_meeting(event)
+        m = construct_meeting(event, test=test)
 
         if m != None:
 
-            # if m.uid not in meetings_ids:
             if m.id not in meetings_ids:
                 meetings.append(m)
-                # meetings_ids.append(m.uid)
                 meetings_ids.append(m.id)
                 met_with = met_with.union(set(m.attendees))
             else:
@@ -199,39 +202,43 @@ def process_events(all_events_from_one_calendar, test=False):
 
 # MAIN FUNCTION
 
+def get_meetings(test=False):
+    global meetings
+    global met_with
+    global meetings_ids
 
-## BB
-all_future_events_bb = get_all_events(EMAIL_BB, f'{USER_PATH}creds_bb/service_key.json')
+    ## BB
+    all_future_events_bb = get_all_events(EMAIL_BB, f'{USER_PATH}creds_bb/service_key.json')
 
-process_events(all_future_events_bb, test=test)
+    process_events(all_future_events_bb, test=test)
 
-## DV
-all_future_events_dv = get_all_events(EMAIL_DV, f'{USER_PATH}creds_dv/service_key.json')
+    ## DV
+    all_future_events_dv = get_all_events(EMAIL_DV, f'{USER_PATH}creds_dv/service_key.json')
 
-process_events(all_future_events_dv, test=test)
+    process_events(all_future_events_dv, test=test)
 
 
-print(f"\n\n{len(meetings)} meetings:")
-for meeting in meetings:
-    attendees = ",".join(meeting.attendees)
-    print(f"    - {meeting.summary} with {attendees}")
+    print(f"\n\n{len(meetings)} meetings:")
+    for meeting in meetings:
+        attendees = ",".join(meeting.attendees)
+        print(f"    - {meeting.summary} on {meeting.date} with {attendees}")
 
-print(f"\n\nMet with {len(met_with)} people:")
-for met in met_with:
-    # print(f"\"{met}\",")
-    print(met)
+    print(f"\n\nMet with {len(met_with)} people:")
+    for met in sorted(met_with):
+        # print(f"\"{met}\",")
+        print(f"    - {met}")
+    print(f"\n\n")
 
-# 230315-2219 if I am the attendee, event added twice
-# Create a Meeting class and dedupe attendees/organiser under a single "attendees" set. 
-# Process list of objects with uid as key.  
+    return meetings
 
-# then make functions and add BB
 
 ########################################################################################################
 
 if __name__ == '__main__':
     print()
     arguments = sys.argv
+
+    get_meetings()
 
     # Get timezone argument, if passed
     # if len(sys.argv) > 1: 
