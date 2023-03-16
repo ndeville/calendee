@@ -25,8 +25,6 @@ keyb = Controller()
 EMAIL_BB = os.getenv("EMAIL_BB")
 EMAIL_DV = os.getenv("EMAIL_DV")
 
-print("\n\n")
-
 ####################
 # GLOBAL VARIABLES
 
@@ -39,7 +37,41 @@ meetings = []
 meetings_ids = []
 
 ####################
+# CLASSES
 
+class Meeting:
+    def __init__(self):
+        self.id = '' # from Google
+        self.uid = '' # self.organiser + self.start
+        self.summary = ''
+        self._date = '' # from Google 'start'
+        self.htmlLink = ''
+        self.attendees = set() # unique emails from both 'attendees' and 'organiser'
+        self.description = ''
+
+    @property
+    def date(self):
+        return self._date
+
+    @date.setter
+    def date(self, value):
+        if isinstance(value, str) and len(value) == 10 and value[4] == '-' and value[7] == '-':
+            year, month, day = value.split('-')
+            try:
+                year = int(year)
+                month = int(month)
+                day = int(day)
+                if 1 <= month <= 12 and 1 <= day <= 31:
+                    self._date = value
+                else:
+                    raise ValueError("Invalid date value")
+            except ValueError:
+                raise ValueError("Invalid date format. Should be YYYY-MM-DD")
+        else:
+            raise ValueError("Invalid date format. Should be YYYY-MM-DD")
+
+
+####################
 # FUNCTIONS
 
 def get_all_events(calendar_id, token, test=False):
@@ -95,52 +127,99 @@ def get_all_events(calendar_id, token, test=False):
 
     return all_events
 
+def construct_meeting(event, test=False):
+    global blacklist
 
+    m = Meeting()
 
-# MAIN FUNCTION
+    m.id = event['id']
 
-# all_future_events_bb = get_all_events(EMAIL_BB, f'{USER_PATH}creds_bb/service_key.json')
-# if test:
-    # print(f"\nall_future_events_bb:")
-    # pp.pprint(all_future_events_bb)
+    m._date = '' # from Google 'start'
+    try:
+        m._date = event['start']['dateTime'].split('T')[0]
+    except KeyError:
+        m.date = event['start']['date']
 
-all_future_events_dv = get_all_events(EMAIL_DV, f'{USER_PATH}creds_dv/service_key.json')
+    m.htmlLink = event['htmlLink']
 
-# if test:
-    # print(f"\nall_future_events_dv:")
-    # pp.pprint(all_future_events_dv)
+    if 'description' in event:
+        m.description = event['description']
 
-for event in all_future_events_dv:
-    uid = event['id']
-    # uid = event['iCalUID']
-    # uid = f"{event['organizer']['email']}-{event['start']['dateTime']}"
-    # print(f"\n{uid=}")
+    # Attendees / only if not in blacklist
     if 'attendees' in event:
         attendees = event['attendees']
         if len(attendees) > 1:
             for attendee in attendees:
                 attendee_email = attendee['email']
                 if attendee_email not in blacklist:
-                    met_with.add(attendee_email)
-                    meetings.append(event)
-        organiser = event['organizer']['email']
-        if organiser not in blacklist:
-            met_with.add(organiser)
-            if uid not in meetings_ids:
-                meetings.append(event)
-                meetings_ids.append(uid)
+                    m.attendees.add(attendee_email)
+    organiser = event['organizer']['email']
+    if organiser not in blacklist:
+        m.attendees.add(organiser)
+
+    m.attendees = list(m.attendees)
+
+    if len(m.attendees) > 0:
+
+        if test:
+            print(f"{m.attendees=} on {m.date}")
+
+        # UID
+        try:
+            m.uid = f"{m.attendees[0]}-{m.date}"
+        except KeyError:
+            print(f"\n\nERROR with {event['id']}:")
+            pp.pprint(event)
+        m.summary = event['summary']
+
+        return m
+    
+    else:
+        return None # no attendees meeting
+
+def process_events(all_events_from_one_calendar, test=False):
+    global met_with
+    global meetings
+    global meetings_ids
+
+    for event in all_events_from_one_calendar:
+
+        m = construct_meeting(event)
+
+        if m != None:
+
+            # if m.uid not in meetings_ids:
+            if m.id not in meetings_ids:
+                meetings.append(m)
+                # meetings_ids.append(m.uid)
+                meetings_ids.append(m.id)
+                met_with = met_with.union(set(m.attendees))
             else:
-                print(f"\n\nDuplicate meeting: {uid=}")
+                print(f"\n\nDuplicate meeting: {m.uid=}")
 
-print(f"\n\n\nMeetings:")
+# MAIN FUNCTION
+
+
+## BB
+all_future_events_bb = get_all_events(EMAIL_BB, f'{USER_PATH}creds_bb/service_key.json')
+
+process_events(all_future_events_bb, test=test)
+
+## DV
+all_future_events_dv = get_all_events(EMAIL_DV, f'{USER_PATH}creds_dv/service_key.json')
+
+process_events(all_future_events_dv, test=test)
+
+
+print(f"\n\n{len(meetings)} meetings:")
 for meeting in meetings:
-    print(f"    - {meeting['summary']} organised by {meeting['organizer']['email']}")
-print(f"\nTOTAL: {len(meetings)=} meetings:")
-
+    attendees = ",".join(meeting.attendees)
+    print(f"    - {meeting.summary} with {attendees}")
 
 print(f"\n\nMet with {len(met_with)} people:")
 for met in met_with:
-    print(f"\"{met}\",")
+    # print(f"\"{met}\",")
+    print(met)
 
 # 230315-2219 if I am the attendee, event added twice
 # Create a Meeting class and dedupe attendees/organiser under a single "attendees" set. 
