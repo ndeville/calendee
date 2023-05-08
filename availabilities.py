@@ -24,13 +24,14 @@ keyb = Controller()
 # Email addresses of calendars to check
 EMAIL_BB = os.getenv("EMAIL_BB")
 EMAIL_DV = os.getenv("EMAIL_DV")
+EMAIL_DR = os.getenv("EMAIL_DR")
 
 print("\n\n")
 
 ####################
 # GLOBAL VARIABLES
 
-test = False
+test = True
 
 slot = 30 # minutes
 
@@ -251,13 +252,13 @@ def generate_availabilities(final_availabilities, timezone='CET'): # CET timezon
     for a in final_availabilities:
         a = a + timedelta(hours=time_offset) # convert to recipient timezone
         if day != a.date():
-            output = f"{output}\n- {format_day(a)} {format_time(a, ampm=ampm)}"
+            output = f"{output}\n- {format_day(a)}\t{format_time(a, ampm=ampm)}"
             day = a.date()
         else:
             output = f"{output}, {format_time(a, ampm=ampm)}"
     
     # Outro line: Add a link to the calendar
-    output = f"{output}\n\nor see all at https://cal.com/ndeville"
+    # output = f"{output}\n\nor see all at https://cal.com/ndeville"
         
     # Replace the last comma with "or"
     lines = output.split('\n')  # Split the text into lines
@@ -323,6 +324,7 @@ def get_my_availabilities(timezone="CET", slot=slot, weekdays_forward=weekdays_f
     datetimes_list_bb = []
     datetimes_list_dv = []
 
+
     # BB
     all_future_events_bb = get_all_events(EMAIL_BB, f'{USER_PATH}creds_bb/service_key.json')
     datetimes_list_bb = list_of_events_datetimes(all_future_events_bb)
@@ -330,6 +332,7 @@ def get_my_availabilities(timezone="CET", slot=slot, weekdays_forward=weekdays_f
     if test:
         print(f"\ndatetimes_list_bb:")
         pp.pprint(datetimes_list_bb)
+
 
     # DV
     all_future_events_dv = get_all_events(EMAIL_DV, f'{USER_PATH}creds_dv/service_key.json')
@@ -339,6 +342,17 @@ def get_my_availabilities(timezone="CET", slot=slot, weekdays_forward=weekdays_f
         print(f"\ndatetimes_list_dv:")
         pp.pprint(datetimes_list_dv)
 
+
+    # # DR
+    # all_future_events_dr = get_all_events(EMAIL_DR, f'{USER_PATH}creds_dr/service_key.json')
+    # datetimes_list_dr = list_of_events_datetimes(all_future_events_dr)
+
+    # if test:
+    #     print(f"\ndatetimes_list_dr:")
+    #     pp.pprint(datetimes_list_dr)
+
+
+    # Consolidate all events
     consolidated_events = datetimes_list_bb + datetimes_list_dv
     consolidated_events = sorted(consolidated_events, key=lambda x: x[0]) # sorted by start time
 
